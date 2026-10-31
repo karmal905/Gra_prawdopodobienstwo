@@ -1,174 +1,19 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gra Inwestycyjna</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        /* Custom scrollbar for table */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-    </style>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
-
-    <!-- Header -->
-    <header class="bg-slate-800 p-4 shadow-md text-center">
-        <h1 class="text-3xl font-bold text-blue-400 uppercase tracking-widest">Inwestor 2026</h1>
-    </header>
-
-    <!-- Main Container -->
-    <main class="flex-grow p-4 flex items-center justify-center relative">
-        
-        <!-- View: Role Selection -->
-        <div id="view-role-select" class="view-section flex flex-col items-center gap-6 w-full max-w-md bg-slate-800 p-8 rounded-2xl shadow-xl">
-            <h2 class="text-2xl font-semibold mb-4 text-center">Wybierz swoją rolę</h2>
-            <button id="btn-role-host" class="w-full py-4 bg-purple-600 hover:bg-purple-500 transition rounded-xl font-bold text-xl shadow-[0_0_15px_rgba(147,51,234,0.5)]">
-                Jestem Prezenterem
-            </button>
-            <button id="btn-role-player" class="w-full py-4 bg-blue-600 hover:bg-blue-500 transition rounded-xl font-bold text-xl shadow-[0_0_15px_rgba(37,99,235,0.5)]">
-                Jestem Graczem
-            </button>
-        </div>
-
-        <!-- View: Player Join -->
-        <div id="view-player-join" class="view-section hidden flex flex-col items-center gap-4 w-full max-w-md bg-slate-800 p-8 rounded-2xl shadow-xl">
-            <h2 class="text-2xl font-semibold mb-2">Dołącz do gry</h2>
-            <input type="text" id="input-team-name" placeholder="Nazwa Twojej drużyny" class="w-full p-4 rounded-xl bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500 text-lg text-center" maxlength="20">
-            <button id="btn-join-game" class="w-full py-4 bg-blue-600 hover:bg-blue-500 transition rounded-xl font-bold text-xl mt-4">
-                Wejdź do gry
-            </button>
-            <button onclick="switchView('view-role-select')" class="text-sm text-slate-400 hover:text-white mt-2">Wróć</button>
-        </div>
-
-        <!-- View: Player Dashboard -->
-        <div id="view-player-dashboard" class="view-section hidden w-full max-w-lg bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-xl flex flex-col gap-6">
-            <div class="flex justify-between items-center border-b border-slate-700 pb-4">
-                <div>
-                    <p class="text-sm text-slate-400">Drużyna</p>
-                    <h2 id="player-team-display" class="text-2xl font-bold text-blue-400">---</h2>
-                </div>
-                <div class="text-right">
-                    <p class="text-sm text-slate-400">Runda</p>
-                    <h2 id="player-round-display" class="text-xl font-bold text-white">1 / 16</h2>
-                </div>
-            </div>
-
-            <div class="bg-slate-700 p-6 rounded-xl text-center shadow-inner relative overflow-hidden">
-                <p class="text-sm text-slate-300 mb-1">Twój Kapitał</p>
-                <h3 id="player-capital-display" class="text-5xl font-extrabold text-emerald-400">1000</h3>
-            </div>
-
-            <div id="player-status-banner" class="bg-blue-900/50 text-blue-200 border border-blue-700 p-4 rounded-xl text-center font-medium animate-pulse">
-                Oczekiwanie na start rundy...
-            </div>
-
-            <div id="player-bet-section" class="flex flex-col gap-4 opacity-50 pointer-events-none transition-opacity duration-300">
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm text-slate-400">Kwota do postawienia (Stawka)</label>
-                    <input type="number" id="input-bet-amount" placeholder="0" min="0" class="w-full p-4 rounded-xl bg-slate-900 border border-slate-600 focus:outline-none focus:border-emerald-500 text-2xl text-center font-bold">
-                </div>
-                <button id="btn-submit-bet" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 transition rounded-xl font-bold text-xl shadow-[0_0_15px_rgba(5,150,105,0.4)]">
-                    Zatwierdź stawkę
-                </button>
-            </div>
-            
-            <div id="player-last-result" class="hidden text-center p-4 rounded-xl font-bold text-xl">
-                <!-- Result will be injected here -->
-            </div>
-        </div>
-
-        <!-- View: Host Dashboard -->
-        <div id="view-host-dashboard" class="view-section hidden w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- Host Controls -->
-            <div class="lg:col-span-1 flex flex-col gap-6">
-                <div class="bg-slate-800 p-6 rounded-2xl shadow-xl">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold">Panel Prezentera</h2>
-                        <span id="host-round-display" class="bg-purple-900 text-purple-200 px-3 py-1 rounded-full text-sm font-bold border border-purple-700">Runda 1/16</span>
-                    </div>
-
-                    <div class="text-center mb-6">
-                        <div class="text-6xl font-mono font-bold text-white mb-2" id="host-timer-display">00:00</div>
-                        <p class="text-sm text-slate-400" id="host-status-text">Oczekiwanie na akcję</p>
-                    </div>
-
-                    <div class="flex flex-col gap-3">
-                        <button id="btn-host-start" class="w-full py-3 bg-blue-600 hover:bg-blue-500 transition rounded-xl font-bold text-lg">
-                            Rozpocznij rundę (45s)
-                        </button>
-                        <button id="btn-host-resolve" class="w-full py-3 bg-purple-600 hover:bg-purple-500 transition rounded-xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                            Losuj (60% szans)
-                        </button>
-                        <button id="btn-host-reset" class="w-full py-2 mt-4 bg-red-900/50 hover:bg-red-800/80 text-red-200 transition rounded-xl font-semibold text-sm border border-red-800">
-                            Resetuj całą grę
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Last Result Banner -->
-                <div id="host-last-result" class="hidden bg-slate-800 p-6 rounded-2xl shadow-xl text-center border-2 border-slate-700">
-                    <p class="text-sm text-slate-400 mb-1">Wynik ostatniego losowania:</p>
-                    <h3 id="host-last-result-text" class="text-3xl font-black uppercase tracking-wider">---</h3>
-                </div>
-            </div>
-
-            <!-- Host Data & Chart -->
-            <div class="lg:col-span-2 flex flex-col gap-6">
-                
-                <!-- Chart Container -->
-                <div class="bg-slate-800 p-4 rounded-2xl shadow-xl h-80 relative w-full">
-                    <canvas id="capitalChart"></canvas>
-                </div>
-
-                <!-- Players Table -->
-                <div class="bg-slate-800 p-6 rounded-2xl shadow-xl flex-grow overflow-hidden flex flex-col">
-                    <h3 class="text-xl font-bold mb-4">Uczestnicy i Stawki</h3>
-                    <div class="overflow-y-auto flex-grow rounded-lg border border-slate-700 bg-slate-900">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-slate-800 sticky top-0 shadow">
-                                <tr>
-                                    <th class="p-3 font-semibold text-slate-300 border-b border-slate-700">Drużyna</th>
-                                    <th class="p-3 font-semibold text-slate-300 border-b border-slate-700 text-right">Kapitał</th>
-                                    <th class="p-3 font-semibold text-slate-300 border-b border-slate-700 text-right">Stawka</th>
-                                    <th class="p-3 font-semibold text-slate-300 border-b border-slate-700 text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="host-players-table" class="divide-y divide-slate-800">
-                                <!-- Dynamic rows -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Overlay Loader -->
-    <div id="loader" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center hidden backdrop-blur-sm">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-    </div>
-
-    <!-- Firebase App Logic -->
+<!-- Firebase App Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Environment variables setup
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'inwestor-game-default';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            // Fallback mock config to prevent immediate crash if injected config is missing.
-            // In a real generic environment, __firebase_config MUST be provided.
-            projectId: "mock-project-id" 
+        const appId = 'gra-inwestor-2026';
+
+        // 1. TUTAJ WKLEJ SWOJE KLUCZE Z PANELU FIREBASE
+        const firebaseConfig = {
+            apiKey: "WKLEJ_SWOJ_API_KEY",
+            authDomain: "twoj-projekt.firebaseapp.com",
+            projectId: "twoj-projekt",
+            storageBucket: "twoj-projekt.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
         };
 
         let app, db, auth, currentUser;
@@ -178,14 +23,13 @@
             db = getFirestore(app);
             auth = getAuth(app);
         } catch (e) {
-            console.error("Firebase init error:", e);
+            console.error("Błąd inicjalizacji Firebase:", e);
+            alert("Błąd połączenia z bazą danych. Sprawdź konfigurację.");
         }
 
-        // DOM Elements
         const views = document.querySelectorAll('.view-section');
         const loader = document.getElementById('loader');
         
-        // State variables
         let isHost = false;
         let localPlayerId = null;
         let currentGameState = null;
@@ -193,12 +37,9 @@
         let timerInterval = null;
         let capitalChartInstance = null;
 
-        // Firebase Paths (Strict Rules)
-        const getGameStateRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main');
-        const getPlayersRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'players');
-        const getPlayerRef = (uid) => doc(db, 'artifacts', appId, 'public', 'data', 'players', uid);
-
-        // --- Core Functions ---
+        const getGameStateRef = () => doc(db, 'gry', appId, 'dane', 'stanGry');
+        const getPlayersRef = () => collection(db, 'gry', appId, 'gracze');
+        const getPlayerRef = (uid) => doc(db, 'gry', appId, 'gracze', uid);
 
         function showLoader() { loader.classList.remove('hidden'); }
         function hideLoader() { loader.classList.add('hidden'); }
@@ -211,28 +52,22 @@
         async function authenticate() {
             showLoader();
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                // Logowanie anonimowe
+                await signInAnonymously(auth);
                 currentUser = auth.currentUser;
                 localPlayerId = currentUser.uid;
             } catch (error) {
-                console.error("Auth Error:", error);
-                alert("Błąd autoryzacji: " + error.message);
+                console.error("Błąd autoryzacji:", error);
+                alert("Błąd logowania. Upewnij się, że włączyłeś 'Logowanie anonimowe' w Firebase. Szukaj w konsoli (F12) więcej szczegółów.");
             }
             hideLoader();
         }
 
-        // --- Game Initialization ---
-        
         async function initHost() {
             await authenticate();
             if (!currentUser) return;
             isHost = true;
             
-            // Ensure gameState exists
             const stateRef = getGameStateRef();
             const snap = await getDoc(stateRef);
             if (!snap.exists()) {
@@ -240,7 +75,7 @@
                     round: 1,
                     bettingOpen: false,
                     endTime: null,
-                    lastResult: null // 'WIN' or 'LOSE'
+                    lastResult: null
                 });
             }
             
@@ -259,7 +94,6 @@
         async function joinGame() {
             const teamName = document.getElementById('input-team-name').value.trim();
             if (!teamName) {
-                // UI feedback instead of alert
                 const input = document.getElementById('input-team-name');
                 input.classList.add('border-red-500');
                 setTimeout(() => input.classList.remove('border-red-500'), 2000);
@@ -281,12 +115,11 @@
                 listenToLocalPlayer();
                 switchView('view-player-dashboard');
             } catch (e) {
-                console.error("Join game error", e);
+                console.error("Błąd dołączania", e);
+                alert("Błąd bazy danych (prawdopodobnie reguły Firestore blokują zapis).");
             }
             hideLoader();
         }
-
-        // --- Listeners ---
 
         function listenToGameState() {
             onSnapshot(getGameStateRef(), (docSnap) => {
@@ -294,25 +127,23 @@
                     currentGameState = docSnap.data();
                     updateUIFromGameState();
                 }
-            }, (err) => console.error("GameState listener error", err));
+            }, (err) => console.error("Błąd nasłuchu stanu gry", err));
         }
 
         function listenToPlayers() {
-            // Host listens to all players for table and chart
             onSnapshot(getPlayersRef(), (snapshot) => {
                 playersData = [];
                 snapshot.forEach(doc => {
                     playersData.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // Sort by capital descending
                 playersData.sort((a, b) => b.capital - a.capital);
                 
                 if (isHost) {
                     updateHostPlayersTable();
                     updateChart();
                 }
-            }, (err) => console.error("Players listener error", err));
+            }, (err) => console.error("Błąd nasłuchu graczy", err));
         }
 
         function listenToLocalPlayer() {
@@ -321,7 +152,6 @@
                     const data = docSnap.data();
                     const capDisplay = document.getElementById('player-capital-display');
                     
-                    // Animate change if different
                     if (capDisplay.innerText !== data.capital.toString()) {
                         capDisplay.classList.add('scale-110', 'text-yellow-400');
                         setTimeout(() => capDisplay.classList.remove('scale-110', 'text-yellow-400'), 500);
@@ -340,10 +170,8 @@
                         statusBanner.className = "bg-emerald-900/50 text-emerald-200 border border-emerald-700 p-4 rounded-xl text-center font-medium";
                     }
                 }
-            }, (err) => console.error("Local player listener error", err));
+            }, (err) => console.error("Błąd nasłuchu gracza", err));
         }
-
-        // --- UI Updaters ---
 
         function updateUIFromGameState() {
             if (!currentGameState) return;
@@ -351,14 +179,12 @@
             const r = currentGameState.round;
             const isFinished = r > 16;
             
-            // Shared logic
             document.getElementById('player-round-display').innerText = `${Math.min(r, 16)} / 16`;
             document.getElementById('host-round-display').innerText = `Runda ${Math.min(r, 16)}/16`;
 
             manageTimer();
 
             if (isHost) {
-                // Host UI
                 const btnStart = document.getElementById('btn-host-start');
                 const btnResolve = document.getElementById('btn-host-resolve');
                 const statusTxt = document.getElementById('host-status-text');
@@ -375,13 +201,11 @@
                 } else {
                     statusTxt.classList.replace('text-green-400', 'text-slate-400');
                     if (currentGameState.endTime !== null && currentGameState.endTime <= Date.now() + 2000) {
-                        // Round finished betting, waiting for resolution
                         btnStart.disabled = true;
                         btnResolve.disabled = false;
                         btnResolve.classList.add('animate-pulse');
                         statusTxt.innerText = "Czas minął. Rozlicz rundę!";
                     } else {
-                        // Ready to start next round
                         btnStart.disabled = false;
                         btnResolve.disabled = true;
                         btnResolve.classList.remove('animate-pulse');
@@ -389,7 +213,6 @@
                     }
                 }
 
-                // Show host last result
                 const hostResultBox = document.getElementById('host-last-result');
                 const hostResultText = document.getElementById('host-last-result-text');
                 if (currentGameState.lastResult) {
@@ -405,7 +228,6 @@
                     }
                 }
             } else {
-                // Player UI
                 const betSection = document.getElementById('player-bet-section');
                 const statusBanner = document.getElementById('player-status-banner');
                 const resultBox = document.getElementById('player-last-result');
@@ -418,7 +240,7 @@
 
                 if (currentGameState.bettingOpen) {
                     betSection.classList.remove('opacity-50', 'pointer-events-none');
-                    document.getElementById('input-bet-amount').value = ''; // clear previous
+                    document.getElementById('input-bet-amount').value = '';
                     
                     statusBanner.innerText = "Obstawiaj! Czas ucieka...";
                     statusBanner.className = "bg-yellow-900/50 text-yellow-200 border border-yellow-700 p-4 rounded-xl text-center font-medium animate-pulse";
@@ -433,9 +255,7 @@
                         statusBanner.className = "bg-blue-900/50 text-blue-200 border border-blue-700 p-4 rounded-xl text-center font-medium";
                     }
 
-                    // Show result to player if available and betting is closed (not waiting for resolution)
                     if (currentGameState.lastResult && (!currentGameState.endTime || currentGameState.endTime > Date.now() + 100000)) { 
-                        // slight hack: if endTime is very old, we show result.
                         resultBox.classList.remove('hidden');
                         if (currentGameState.lastResult === 'WIN') {
                             resultBox.innerText = "WYGRANA!";
@@ -468,7 +288,6 @@
                     if (isHost) document.getElementById('host-timer-display').innerText = "00:00";
                     clearInterval(timerInterval);
                     
-                    // If host, automatically close betting if it's still open
                     if (isHost && currentGameState.bettingOpen) {
                         updateDoc(getGameStateRef(), { bettingOpen: false });
                     }
@@ -479,14 +298,14 @@
                     
                     if (!isHost && currentGameState.bettingOpen) {
                         const sb = document.getElementById('player-status-banner');
-                        if (!sb.innerText.includes("Postawiono")) { // Don't overwrite if they already bet
+                        if (!sb.innerText.includes("Postawiono")) {
                             sb.innerText = `Czas do końca: ${secs}s`;
                         }
                     }
                 }
             };
 
-            updateDisplay(); // Run once immediately
+            updateDisplay();
             if (currentGameState?.bettingOpen) {
                 timerInterval = setInterval(updateDisplay, 200);
             }
@@ -514,8 +333,6 @@
                 tbody.appendChild(tr);
             });
         }
-
-        // --- Chart Logic ---
 
         function initChart() {
             const ctx = document.getElementById('capitalChart').getContext('2d');
@@ -549,9 +366,7 @@
             });
         }
 
-        const colors = [
-            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'
-        ];
+        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
         function updateChart() {
             if (!capitalChartInstance) return;
@@ -572,14 +387,11 @@
             capitalChartInstance.update();
         }
 
-        // --- Actions ---
-
         async function startRound() {
             if (!isHost || !currentGameState) return;
             if (currentGameState.round > 16) return;
 
             try {
-                // Reset player bets
                 for (const p of playersData) {
                     await updateDoc(getPlayerRef(p.id), {
                         hasBet: false,
@@ -587,27 +399,24 @@
                     });
                 }
 
-                // Update game state
                 await updateDoc(getGameStateRef(), {
                     bettingOpen: true,
                     endTime: Date.now() + 45000,
                     lastResult: null
                 });
             } catch (e) {
-                console.error("Start round error", e);
+                console.error("Błąd startu rundy", e);
             }
         }
 
         async function resolveRound() {
             if (!isHost || !currentGameState) return;
-            if (currentGameState.bettingOpen) return; // double check
+            if (currentGameState.bettingOpen) return;
 
             try {
-                // 1. Determine WIN (60%) or LOSE (40%)
                 const isWin = Math.random() < 0.6;
                 const resultStr = isWin ? 'WIN' : 'LOSE';
 
-                // 2. Process all players sequentially (simple loop avoids complex batches)
                 for (const p of playersData) {
                     let newCapital = p.capital;
                     const bet = p.currentBet || 0;
@@ -628,15 +437,14 @@
                     });
                 }
 
-                // 3. Update game state
                 await updateDoc(getGameStateRef(), {
                     round: currentGameState.round + 1,
                     lastResult: resultStr,
-                    endTime: 0 // Reset timer
+                    endTime: 0
                 });
 
             } catch (e) {
-                console.error("Resolve round error", e);
+                console.error("Błąd rozliczenia", e);
             }
         }
 
@@ -651,11 +459,9 @@
             }
 
             try {
-                // Get current capital safely
                 const docSnap = await getDoc(getPlayerRef(localPlayerId));
                 if (docSnap.exists()) {
                     const cap = docSnap.data().capital;
-                    // Cap bet at current capital
                     betAmount = Math.min(betAmount, cap);
                     
                     await updateDoc(getPlayerRef(localPlayerId), {
@@ -664,7 +470,7 @@
                     });
                 }
             } catch (e) {
-                console.error("Bet submit error", e);
+                console.error("Błąd zakładu", e);
             }
         }
 
@@ -674,13 +480,11 @@
 
             showLoader();
             try {
-                // Delete all players
                 const pSnap = await getDocs(getPlayersRef());
                 for (const d of pSnap.docs) {
                     await deleteDoc(d.ref);
                 }
 
-                // Reset Game State
                 await setDoc(getGameStateRef(), {
                     round: 1,
                     bettingOpen: false,
@@ -689,13 +493,11 @@
                 });
 
             } catch (e) {
-                console.error("Reset error", e);
+                console.error("Błąd resetu", e);
             }
             hideLoader();
         }
 
-        // --- Event Listeners Bindings ---
-        
         document.getElementById('btn-role-host').addEventListener('click', initHost);
         document.getElementById('btn-role-player').addEventListener('click', initPlayerJoin);
         document.getElementById('btn-join-game').addEventListener('click', joinGame);
@@ -706,7 +508,6 @@
         
         document.getElementById('btn-submit-bet').addEventListener('click', submitBet);
 
-        // Enter key for inputs
         document.getElementById('input-team-name').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') joinGame();
         });
@@ -715,5 +516,3 @@
         });
 
     </script>
-</body>
-</html>
