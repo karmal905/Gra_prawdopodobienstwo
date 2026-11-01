@@ -67,4 +67,613 @@
                     <label class="text-sm text-slate-400">Kwota do postawienia (Stawka)</label>
                     <input type="number" id="input-bet-amount" placeholder="0" min="0" class="w-full p-4 rounded-xl bg-slate-900 border border-slate-600 focus:outline-none focus:border-emerald-500 text-2xl text-center font-bold">
                 </div>
-                <button id="btn-submit-bet" class="w-full py-4 bg-emerald-600
+                <button id="btn-submit-bet" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 transition rounded-xl font-bold text-xl shadow-[0_0_15px_rgba(5,150,105,0.4)]">
+                    Zatwierdź stawkę
+                </button>
+            </div>
+            
+            <div id="player-last-result" class="hidden text-center p-4 rounded-xl font-bold text-xl"></div>
+        </div>
+
+        <div id="view-host-dashboard" class="view-section hidden w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-1 flex flex-col gap-6">
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Panel Prezentera</h2>
+                        <span id="host-round-display" class="bg-purple-900 text-purple-200 px-3 py-1 rounded-full text-sm font-bold border border-purple-700">Runda 1/16</span>
+                    </div>
+
+                    <div class="text-center mb-6">
+                        <div class="text-6xl font-mono font-bold text-white mb-2" id="host-timer-display">00:00</div>
+                        <p class="text-sm text-slate-400" id="host-status-text">Oczekiwanie na akcję</p>
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                        <button id="btn-host-start" class="w-full py-3 bg-blue-600 hover:bg-blue-500 transition rounded-xl font-bold text-lg">
+                            Rozpocznij rundę (45s)
+                        </button>
+                        <button id="btn-host-end-now" class="hidden w-full py-2 bg-yellow-600 hover:bg-yellow-500 transition rounded-xl font-bold text-md shadow-[0_0_10px_rgba(202,138,4,0.4)]">
+                            Zakończ czas (przyspiesz)
+                        </button>
+                        <button id="btn-host-resolve" class="w-full py-3 bg-purple-600 hover:bg-purple-500 transition rounded-xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            Losuj (60% szans)
+                        </button>
+                        <button id="btn-host-reset" class="w-full py-2 mt-4 bg-red-900/50 hover:bg-red-800/80 text-red-200 transition rounded-xl font-semibold text-sm border border-red-800">
+                            Resetuj całą grę
+                        </button>
+                    </div>
+                </div>
+
+                <div id="host-last-result" class="hidden bg-slate-800 p-6 rounded-2xl shadow-xl text-center border-2 border-slate-700">
+                    <p class="text-sm text-slate-400 mb-1">Wynik ostatniego losowania:</p>
+                    <h3 id="host-last-result-text" class="text-3xl font-black uppercase tracking-wider">---</h3>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                <div class="bg-slate-800 p-4 rounded-2xl shadow-xl h-80 relative w-full">
+                    <canvas id="capitalChart"></canvas>
+                </div>
+
+                <div class="bg-slate-800 p-6 rounded-2xl shadow-xl flex-grow overflow-hidden flex flex-col">
+                    <h3 class="text-xl font-bold mb-4">Uczestnicy i Stawki</h3>
+                    <div class="overflow-y-auto flex-grow rounded-lg border border-slate-700 bg-slate-900">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-800 sticky top-0 shadow">
+                                <tr>
+                                    <th class="p-3 font-semibold text-slate-300 border-b border-slate-700">Drużyna</th>
+                                    <th class="p-3 font-semibold text-slate-300 border-b border-slate-700 text-right">Kapitał</th>
+                                    <th class="p-3 font-semibold text-slate-300 border-b border-slate-700 text-right">Stawka</th>
+                                    <th class="p-3 font-semibold text-slate-300 border-b border-slate-700 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="host-players-table" class="divide-y divide-slate-800">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="loader" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center hidden backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const appId = 'gra-inwestor-2026';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCX_bN-3anfuyxB2icwEKhwl6j1Kc-cw78",
+            authDomain: "gra-prawdopodobienstwo.firebaseapp.com",
+            projectId: "gra-prawdopodobienstwo",
+            storageBucket: "gra-prawdopodobienstwo.firebasestorage.app",
+            messagingSenderId: "985313632076",
+            appId: "1:985313632076:web:3c5fd729f92ec43de179e9",
+            measurementId: "G-22QWGFL37H"
+        };
+
+        let app, db, auth, currentUser;
+        
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Błąd inicjalizacji Firebase:", e);
+            alert("Błąd połączenia z bazą danych. Sprawdź konfigurację.");
+        }
+
+        const views = document.querySelectorAll('.view-section');
+        const loader = document.getElementById('loader');
+        
+        let isHost = false;
+        let localPlayerId = null;
+        let currentGameState = null;
+        let playersData = [];
+        let timerInterval = null;
+        let capitalChartInstance = null;
+
+        const getGameStateRef = () => doc(db, 'gry', appId, 'dane', 'stanGry');
+        const getPlayersRef = () => collection(db, 'gry', appId, 'gracze');
+        const getPlayerRef = (uid) => doc(db, 'gry', appId, 'gracze', uid);
+
+        function switchView(viewId) {
+            views.forEach(v => v.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        function showLoader() { loader.classList.remove('hidden'); }
+        function hideLoader() { loader.classList.add('hidden'); }
+
+        async function authenticate() {
+            showLoader();
+            try {
+                await signInAnonymously(auth);
+                currentUser = auth.currentUser;
+                localPlayerId = currentUser.uid;
+            } catch (error) {
+                console.error("Błąd autoryzacji:", error);
+                alert("Błąd logowania. Upewnij się, że włączyłaś 'Logowanie anonimowe' w Firebase.");
+            }
+            hideLoader();
+        }
+
+        async function initHost() {
+            await authenticate();
+            if (!currentUser) return;
+            isHost = true;
+            
+            const stateRef = getGameStateRef();
+            const snap = await getDoc(stateRef);
+            if (!snap.exists()) {
+                await setDoc(stateRef, {
+                    round: 1,
+                    bettingOpen: false,
+                    endTime: null,
+                    lastResult: null
+                });
+            }
+            
+            initChart();
+            listenToGameState();
+            listenToPlayers();
+            switchView('view-host-dashboard');
+        }
+
+        async function initPlayerJoin() {
+            await authenticate();
+            if (!currentUser) return;
+            switchView('view-player-join');
+        }
+
+        async function joinGame() {
+            const teamName = document.getElementById('input-team-name').value.trim();
+            if (!teamName) {
+                const input = document.getElementById('input-team-name');
+                input.classList.add('border-red-500');
+                setTimeout(() => input.classList.remove('border-red-500'), 2000);
+                return;
+            }
+
+            showLoader();
+            try {
+                await setDoc(getPlayerRef(localPlayerId), {
+                    teamName: teamName,
+                    capital: 1000,
+                    currentBet: 0,
+                    history: [1000],
+                    hasBet: false
+                });
+                
+                document.getElementById('player-team-display').innerText = teamName;
+                listenToGameState();
+                listenToLocalPlayer();
+                switchView('view-player-dashboard');
+            } catch (e) {
+                console.error("Błąd dołączania", e);
+                alert("Błąd bazy danych. Upewnij się, że opublikowałaś reguły trybu testowego.");
+            }
+            hideLoader();
+        }
+
+        function listenToGameState() {
+            onSnapshot(getGameStateRef(), (docSnap) => {
+                if (docSnap.exists()) {
+                    currentGameState = docSnap.data();
+                    updateUIFromGameState();
+                }
+            }, (err) => console.error("Błąd nasłuchu stanu gry", err));
+        }
+
+        function listenToPlayers() {
+            onSnapshot(getPlayersRef(), (snapshot) => {
+                playersData = [];
+                snapshot.forEach(doc => {
+                    playersData.push({ id: doc.id, ...doc.data() });
+                });
+                
+                playersData.sort((a, b) => b.capital - a.capital);
+                
+                if (isHost) {
+                    updateHostPlayersTable();
+                    updateChart();
+                }
+            }, (err) => console.error("Błąd nasłuchu graczy", err));
+        }
+
+        function listenToLocalPlayer() {
+            onSnapshot(getPlayerRef(localPlayerId), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const capDisplay = document.getElementById('player-capital-display');
+                    
+                    if (capDisplay.innerText !== data.capital.toString()) {
+                        capDisplay.classList.add('scale-110', 'text-yellow-400');
+                        setTimeout(() => capDisplay.classList.remove('scale-110', 'text-yellow-400'), 500);
+                    }
+                    capDisplay.innerText = data.capital;
+                    
+                    const betInput = document.getElementById('input-bet-amount');
+                    betInput.max = data.capital;
+                    
+                    const betSection = document.getElementById('player-bet-section');
+                    const statusBanner = document.getElementById('player-status-banner');
+                    
+                    if (data.hasBet && currentGameState?.bettingOpen) {
+                        betSection.classList.add('opacity-50', 'pointer-events-none');
+                        statusBanner.innerText = `Postawiono: ${data.currentBet}. Oczekiwanie na koniec rundy...`;
+                        statusBanner.className = "bg-emerald-900/50 text-emerald-200 border border-emerald-700 p-4 rounded-xl text-center font-medium";
+                    }
+                }
+            }, (err) => console.error("Błąd nasłuchu gracza", err));
+        }
+
+        function updateUIFromGameState() {
+            if (!currentGameState) return;
+
+            const r = currentGameState.round;
+            const isFinished = r > 16;
+            
+            document.getElementById('player-round-display').innerText = `${Math.min(r, 16)} / 16`;
+            document.getElementById('host-round-display').innerText = `Runda ${Math.min(r, 16)}/16`;
+
+            manageTimer();
+
+            if (isHost) {
+                const btnStart = document.getElementById('btn-host-start');
+                const btnEndNow = document.getElementById('btn-host-end-now');
+                const btnResolve = document.getElementById('btn-host-resolve');
+                const statusTxt = document.getElementById('host-status-text');
+
+                if (isFinished) {
+                    btnStart.disabled = true;
+                    btnEndNow.classList.add('hidden');
+                    btnResolve.disabled = true;
+                    statusTxt.innerText = "GRA ZAKOŃCZONA";
+                } else if (currentGameState.bettingOpen) {
+                    btnStart.disabled = true;
+                    btnEndNow.classList.remove('hidden');
+                    btnResolve.disabled = true;
+                    statusTxt.innerText = "Obstawianie w toku...";
+                    statusTxt.classList.replace('text-slate-400', 'text-green-400');
+                } else {
+                    statusTxt.classList.replace('text-green-400', 'text-slate-400');
+                    btnEndNow.classList.add('hidden');
+                    if (currentGameState.endTime !== null && currentGameState.endTime <= Date.now() + 2000) {
+                        btnStart.disabled = true;
+                        btnResolve.disabled = false;
+                        btnResolve.classList.add('animate-pulse');
+                        statusTxt.innerText = "Czas minął. Rozlicz rundę!";
+                    } else {
+                        btnStart.disabled = false;
+                        btnResolve.disabled = true;
+                        btnResolve.classList.remove('animate-pulse');
+                        statusTxt.innerText = "Oczekiwanie na start rundy";
+                    }
+                }
+
+                const hostResultBox = document.getElementById('host-last-result');
+                const hostResultText = document.getElementById('host-last-result-text');
+                if (currentGameState.lastResult) {
+                    hostResultBox.classList.remove('hidden');
+                    if (currentGameState.lastResult === 'WIN') {
+                        hostResultText.innerText = "ZYSK (+2x)";
+                        hostResultText.className = "text-3xl font-black uppercase tracking-wider text-emerald-400";
+                        hostResultBox.className = "bg-slate-800 p-6 rounded-2xl shadow-xl text-center border-2 border-emerald-900";
+                    } else {
+                        hostResultText.innerText = "STRATA (-1x)";
+                        hostResultText.className = "text-3xl font-black uppercase tracking-wider text-red-500";
+                        hostResultBox.className = "bg-slate-800 p-6 rounded-2xl shadow-xl text-center border-2 border-red-900";
+                    }
+                }
+            } else {
+                const betSection = document.getElementById('player-bet-section');
+                const statusBanner = document.getElementById('player-status-banner');
+                const resultBox = document.getElementById('player-last-result');
+
+                if (isFinished) {
+                    betSection.classList.add('hidden');
+                    statusBanner.innerText = "GRA ZAKOŃCZONA";
+                    return;
+                }
+
+                if (currentGameState.bettingOpen) {
+                    betSection.classList.remove('opacity-50', 'pointer-events-none');
+                    document.getElementById('input-bet-amount').value = '';
+                    
+                    statusBanner.innerText = "Obstawiaj! Czas ucieka...";
+                    statusBanner.className = "bg-yellow-900/50 text-yellow-200 border border-yellow-700 p-4 rounded-xl text-center font-medium animate-pulse";
+                    resultBox.classList.add('hidden');
+                } else {
+                    betSection.classList.add('opacity-50', 'pointer-events-none');
+                    if (currentGameState.endTime && currentGameState.endTime <= Date.now() + 2000) {
+                        statusBanner.innerText = "Koniec czasu. Oczekiwanie na losowanie...";
+                        statusBanner.className = "bg-slate-800 text-slate-300 border border-slate-600 p-4 rounded-xl text-center font-medium";
+                    } else {
+                        statusBanner.innerText = "Oczekiwanie na start rundy...";
+                        statusBanner.className = "bg-blue-900/50 text-blue-200 border border-blue-700 p-4 rounded-xl text-center font-medium";
+                    }
+
+                    if (currentGameState.lastResult && (!currentGameState.endTime || currentGameState.endTime > Date.now() + 100000)) { 
+                        resultBox.classList.remove('hidden');
+                        if (currentGameState.lastResult === 'WIN') {
+                            resultBox.innerText = "WYGRANA!";
+                            resultBox.className = "text-center p-4 rounded-xl font-bold text-2xl bg-emerald-900/40 text-emerald-400 border border-emerald-800";
+                        } else {
+                            resultBox.innerText = "PRZEGRANA!";
+                            resultBox.className = "text-center p-4 rounded-xl font-bold text-2xl bg-red-900/40 text-red-400 border border-red-800";
+                        }
+                    }
+                }
+            }
+        }
+
+        function manageTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            const updateDisplay = () => {
+                if (!currentGameState || !currentGameState.endTime) {
+                    if (isHost) document.getElementById('host-timer-display').innerText = "00:00";
+                    return;
+                }
+                
+                const now = Date.now();
+                const diff = currentGameState.endTime - now;
+                
+                if (diff <= 0) {
+                    if (isHost) document.getElementById('host-timer-display').innerText = "00:00";
+                    clearInterval(timerInterval);
+                    
+                    if (isHost && currentGameState.bettingOpen) {
+                        updateDoc(getGameStateRef(), { bettingOpen: false });
+                    }
+                } else {
+                    const secs = Math.ceil(diff / 1000);
+                    const formatted = `00:${secs.toString().padStart(2, '0')}`;
+                    if (isHost) document.getElementById('host-timer-display').innerText = formatted;
+                    
+                    if (!isHost && currentGameState.bettingOpen) {
+                        const sb = document.getElementById('player-status-banner');
+                        if (!sb.innerText.includes("Postawiono")) {
+                            sb.innerText = `Czas do końca: ${secs}s`;
+                        }
+                    }
+                }
+            };
+
+            updateDisplay();
+            if (currentGameState?.bettingOpen) {
+                timerInterval = setInterval(updateDisplay, 200);
+            }
+        }
+
+        function updateHostPlayersTable() {
+            const tbody = document.getElementById('host-players-table');
+            tbody.innerHTML = '';
+
+            playersData.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/50 transition";
+                
+                let statusBadge = `<span class="bg-slate-700 text-slate-400 px-2 py-1 rounded text-xs">Czeka</span>`;
+                if (p.hasBet) {
+                    statusBadge = `<span class="bg-green-900/80 text-green-300 border border-green-700 px-2 py-1 rounded text-xs font-semibold">Gotowy</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-3 border-b border-slate-700 font-medium text-blue-200">${p.teamName}</td>
+                    <td class="p-3 border-b border-slate-700 text-right font-mono text-emerald-400 font-bold">${p.capital}</td>
+                    <td class="p-3 border-b border-slate-700 text-right font-mono text-yellow-400">${p.hasBet ? p.currentBet : '-'}</td>
+                    <td class="p-3 border-b border-slate-700 text-center">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('capitalChart').getContext('2d');
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = 'Inter';
+
+            capitalChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Start', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15', 'R16'],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 500 },
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 12 } },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            grid: { color: '#334155' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+
+        function updateChart() {
+            if (!capitalChartInstance) return;
+
+            const datasets = playersData.map((p, index) => {
+                return {
+                    label: p.teamName,
+                    data: p.history,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '40',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3
+                };
+            });
+
+            capitalChartInstance.data.datasets = datasets;
+            capitalChartInstance.update();
+        }
+
+        async function startRound() {
+            if (!isHost || !currentGameState) return;
+            if (currentGameState.round > 16) return;
+
+            try {
+                for (const p of playersData) {
+                    await updateDoc(getPlayerRef(p.id), {
+                        hasBet: false,
+                        currentBet: 0
+                    });
+                }
+
+                await updateDoc(getGameStateRef(), {
+                    bettingOpen: true,
+                    endTime: Date.now() + 45000,
+                    lastResult: null
+                });
+            } catch (e) {
+                console.error("Błąd startu rundy", e);
+            }
+        }
+        
+        async function endRoundNow() {
+            if (!isHost || !currentGameState?.bettingOpen) return;
+            try {
+                await updateDoc(getGameStateRef(), {
+                    bettingOpen: false,
+                    endTime: Date.now()
+                });
+            } catch (e) {
+                console.error("Błąd skracania czasu", e);
+            }
+        }
+
+        async function resolveRound() {
+            if (!isHost || !currentGameState) return;
+            if (currentGameState.bettingOpen) return;
+
+            try {
+                const isWin = Math.random() < 0.6;
+                const resultStr = isWin ? 'WIN' : 'LOSE';
+
+                for (const p of playersData) {
+                    let newCapital = p.capital;
+                    const bet = p.currentBet || 0;
+
+                    if (isWin) {
+                        newCapital += (2 * bet);
+                    } else {
+                        newCapital = Math.max(0, newCapital - bet);
+                    }
+
+                    const newHistory = [...p.history, newCapital];
+
+                    await updateDoc(getPlayerRef(p.id), {
+                        capital: newCapital,
+                        history: newHistory,
+                        currentBet: 0,
+                        hasBet: false
+                    });
+                }
+
+                await updateDoc(getGameStateRef(), {
+                    round: currentGameState.round + 1,
+                    lastResult: resultStr,
+                    endTime: null
+                });
+
+            } catch (e) {
+                console.error("Błąd rozliczenia", e);
+            }
+        }
+
+        async function submitBet() {
+            if (!localPlayerId || !currentGameState?.bettingOpen) return;
+
+            const input = document.getElementById('input-bet-amount');
+            let betAmount = parseInt(input.value);
+
+            if (isNaN(betAmount) || betAmount < 0) {
+                betAmount = 0;
+            }
+
+            try {
+                const docSnap = await getDoc(getPlayerRef(localPlayerId));
+                if (docSnap.exists()) {
+                    const cap = docSnap.data().capital;
+                    betAmount = Math.min(betAmount, cap);
+                    
+                    await updateDoc(getPlayerRef(localPlayerId), {
+                        currentBet: betAmount,
+                        hasBet: true
+                    });
+                }
+            } catch (e) {
+                console.error("Błąd zakładu", e);
+            }
+        }
+
+        async function resetGame() {
+            if (!isHost) return;
+            if (!confirm("Czy na pewno chcesz zresetować całą grę i usunąć graczy?")) return;
+
+            showLoader();
+            try {
+                const pSnap = await getDocs(getPlayersRef());
+                for (const d of pSnap.docs) {
+                    await deleteDoc(d.ref);
+                }
+
+                await setDoc(getGameStateRef(), {
+                    round: 1,
+                    bettingOpen: false,
+                    endTime: null,
+                    lastResult: null
+                });
+
+            } catch (e) {
+                console.error("Błąd resetu", e);
+            }
+            hideLoader();
+        }
+
+        window.switchView = switchView;
+
+        document.getElementById('btn-role-host').addEventListener('click', initHost);
+        document.getElementById('btn-role-player').addEventListener('click', initPlayerJoin);
+        document.getElementById('btn-join-game').addEventListener('click', joinGame);
+        
+        document.getElementById('btn-host-start').addEventListener('click', startRound);
+        document.getElementById('btn-host-end-now').addEventListener('click', endRoundNow);
+        document.getElementById('btn-host-resolve').addEventListener('click', resolveRound);
+        document.getElementById('btn-host-reset').addEventListener('click', resetGame);
+        
+        document.getElementById('btn-submit-bet').addEventListener('click', submitBet);
+
+        document.getElementById('input-team-name').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinGame();
+        });
+        document.getElementById('input-bet-amount').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitBet();
+        });
+
+    </script>
+</body>
+</html>
