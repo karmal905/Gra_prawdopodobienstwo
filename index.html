@@ -577,7 +577,7 @@
                 await updateDoc(getGameStateRef(), {
                     round: currentGameState.round + 1,
                     lastResult: resultStr,
-                    endTime: 0
+                    endTime: null
                 });
 
             } catch (e) {
