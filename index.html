@@ -545,7 +545,7 @@
 
                 await updateDoc(getGameStateRef(), {
                     bettingOpen: true,
-                    endTime: Date.now() + 30000, // Zmiana na 30 sekund
+                    endTime: Date.now() + 30000,
                     lastResult: null
                 });
             } catch (e) {
@@ -570,7 +570,7 @@
             if (currentGameState.bettingOpen) return;
 
             try {
-                const isWin = Math.random() < 0.6;
+                const isWin = Math.random() < 0.6; // 60% szans na wygraną
                 const resultStr = isWin ? 'WIN' : 'LOSE';
 
                 for (const p of playersData) {
@@ -578,8 +578,10 @@
                     const bet = p.currentBet || 0;
 
                     if (isWin) {
-                        newCapital += (1 * bet); // Zmiana z 2 * bet na 1 * bet (wypłata x1)
+                        // Poprawiona wypłata: zwrot stawki + zysk 1:1
+                        newCapital += bet; 
                     } else {
+                        // Strata postawionej stawki
                         newCapital = Math.max(0, newCapital - bet);
                     }
 
@@ -673,7 +675,6 @@
         document.getElementById('input-bet-amount').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') submitBet();
         });
-
     </script>
 </body>
 </html>
