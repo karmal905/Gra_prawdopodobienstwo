@@ -90,7 +90,7 @@
 
                     <div class="flex flex-col gap-3">
                         <button id="btn-host-start" class="w-full py-3 bg-blue-600 hover:bg-blue-500 transition rounded-xl font-bold text-lg">
-                            Rozpocznij rundę (45s)
+                            Rozpocznij rundę (30s)
                         </button>
                         <button id="btn-host-end-now" class="hidden w-full py-2 bg-yellow-600 hover:bg-yellow-500 transition rounded-xl font-bold text-md shadow-[0_0_10px_rgba(202,138,4,0.4)]">
                             Zakończ czas (przyspiesz)
@@ -362,7 +362,7 @@
                 if (currentGameState.lastResult) {
                     hostResultBox.classList.remove('hidden');
                     if (currentGameState.lastResult === 'WIN') {
-                        hostResultText.innerText = "ZYSK (+2x)";
+                        hostResultText.innerText = "ZYSK (+1x)";
                         hostResultText.className = "text-3xl font-black uppercase tracking-wider text-emerald-400";
                         hostResultBox.className = "bg-slate-800 p-6 rounded-2xl shadow-xl text-center border-2 border-emerald-900";
                     } else {
@@ -545,7 +545,7 @@
 
                 await updateDoc(getGameStateRef(), {
                     bettingOpen: true,
-                    endTime: Date.now() + 45000,
+                    endTime: Date.now() + 30000, // Zmiana na 30 sekund
                     lastResult: null
                 });
             } catch (e) {
@@ -578,7 +578,7 @@
                     const bet = p.currentBet || 0;
 
                     if (isWin) {
-                        newCapital += (2 * bet);
+                        newCapital += (1 * bet); // Zmiana z 2 * bet na 1 * bet (wypłata x1)
                     } else {
                         newCapital = Math.max(0, newCapital - bet);
                     }
